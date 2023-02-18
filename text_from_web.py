@@ -74,12 +74,9 @@ def blink(clr):
 
 
 def connect_to_wifi():
-    display_text(initial_text="Connecting to wifi")
-    blink(red_)
     print("Connecting to Wifi")
+    blink(red_)
     from secrets import WIFI_SSID, WIFI_PASSWORD
-
-    wifi_available = True
     print("wifi available")
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -89,8 +86,9 @@ def connect_to_wifi():
 
 
 def get_text_from_web():
-    blink(orange_)
+    connect_to_wifi()
     print("Getting text from web.")
+    blink(orange_)
     url = "https://helloworld-k4lulsqqwa-ew.a.run.app"
     response = urequests.get(url)
     full_response = response.json()
@@ -131,7 +129,7 @@ def _defaults():
     return default
 
 
-def display_text(initial_text=get_text_from_web(), initial_brightness=0.5, setup_values=_defaults()):
+def display_text(initial_text="", initial_brightness=0.5, setup_values=_defaults()):
     last_time = time.ticks_ms()
     last_request = int(time.time())
     message_text = initial_text
@@ -193,5 +191,4 @@ def display_text(initial_text=get_text_from_web(), initial_brightness=0.5, setup
         time.sleep(0.001)
 
 
-connect_to_wifi()
-display_text()
+display_text(initial_text=get_text_from_web())
