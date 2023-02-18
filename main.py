@@ -1,113 +1,201 @@
+import json
 import time
-import machine
+import network
+import urequests
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
+from secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
 
-# overclock to 200Mhz
-machine.freq(200000000)
+connected_to_wifi = False
 
-# create galactic object and graphics surface for drawing
-galactic = GalacticUnicorn()
+# create graphics surface for drawing
 graphics = PicoGraphics(DISPLAY)
+gu = GalacticUnicorn()
+width = GalacticUnicorn.WIDTH
+height = GalacticUnicorn.HEIGHT
 
-brightness = 0.5
+# state constants
+STATE_PRE_SCROLL = 0
+STATE_SCROLLING = 1
+STATE_POST_SCROLL = 2
 
-
-# returns the id of the button that is currently pressed or
-# None if none are
-def pressed():
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_A):
-        return GalacticUnicorn.SWITCH_A
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_B):
-        return GalacticUnicorn.SWITCH_B
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_C):
-        return GalacticUnicorn.SWITCH_C
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_D):
-        return GalacticUnicorn.SWITCH_D
-    return None
-
-
-# wait for a button to be pressed and load that effect
-while True:
-    graphics.set_font("bitmap6")
-    graphics.set_pen(graphics.create_pen(0, 0, 0))
-    graphics.clear()
-    graphics.set_pen(graphics.create_pen(155, 155, 155))
-    graphics.text("PRESS", 12, -1, -1, 1)
-    graphics.text("A B C OR D!", 2, 5, -1, 1)
-
-    # brightness up/down
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_UP):
-        brightness += 0.01
-    if galactic.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_DOWN):
-        brightness -= 0.01
-    brightness = max(min(brightness, 1.0), 0.0)
-
-    galactic.set_brightness(brightness)
-    galactic.update(graphics)
-
-    if pressed() == GalacticUnicorn.SWITCH_A:
-        import rain as effect
-        break
-    if pressed() == GalacticUnicorn.SWITCH_B:
-        import clock_mod as effect  # noqa: F811
-        break
-    if pressed() == GalacticUnicorn.SWITCH_C:
-        import rainbow as effect        # noqa: F811
-        break
-    if pressed() == GalacticUnicorn.SWITCH_D:
-        import text_from_web as effect    # noqa: F811
-        break
-
-    # pause for a moment
-    time.sleep(0.01)
-
-# wait until all buttons are released
-while pressed() is not None:
-    time.sleep(0.1)
-
-effect.graphics = graphics
-effect.init()
-
-sleep = False
-was_sleep_pressed = False
+# In the left-upper corner
+# blink a 2x2 square
+# to indicate:
+# WiFi Connected:       green_
+# WiFi disconnected:    red_
+# sync_time successful: blue_
+red_ = 0
+green_ = 1
+blue_ = 2
+yellow_ = 3
+orange_ = 4
+pink_ = 5
+white_ = 6
+black_ = 7
+clr_dict = {
+    red_: (255, 0, 0),
+    green_: (0, 255, 0),
+    blue_: (0, 0, 255),
+    yellow_: (255, 255, 0),
+    orange_: (255, 140, 0),
+    pink_: (255, 20, 147),
+    white_: (255, 255, 255),
+    black_: (0, 0, 0)
+}
+clr_dict_rev = {
+    red_: 'RED',
+    green_: 'GREEN',
+    blue_: 'BLUE',
+    yellow_: 'YELLOW',
+    orange_: 'ORANGE',
+    pink_: 'PINK',
+    white_: 'WHITE',
+    black_: 'BLACK'
+}
 
 
-# wait
-while True:
-    # if A, B, C, or D are pressed then reset
-    if pressed() is not None:
-        machine.reset()
+def blink(clr):
+    if clr in clr_dict.keys():
+        fg = clr_dict[clr]
+        bg = clr_dict[black_]
+        fg_pen = graphics.create_pen(fg[0], fg[1], fg[2])
+        bg_pen = graphics.create_pen(bg[0], bg[1], bg[2])
+        for h in range(3):  # blink 3 times
+            for i in range(2):  # horzontal
+                for j in range(2):  # vertical
+                    graphics.set_pen(fg_pen)  # green or red
+                    graphics.pixel(i, j)
+            gu.update(graphics)
+            time.sleep(0.2)
+            for i in range(2):  # horizontal
+                for j in range(2):  # vertical
+                    graphics.set_pen(bg_pen)  # black
+                    graphics.pixel(i, j)
+            gu.update(graphics)
+            time.sleep(0.2)
 
-    sleep_pressed = galactic.is_pressed(GalacticUnicorn.SWITCH_SLEEP)
-    if sleep_pressed and not was_sleep_pressed:
-        sleep = not sleep
 
-    was_sleep_pressed = sleep_pressed
+def connect_to_wifi():
+    global connected_to_wifi
+    print("Connecting to Wifi")
+    blink(red_)
+    print("wifi available")
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    connected_to_wifi = True
+    print("Connected to wifi")
+    blink(green_)
 
-    if sleep:
-        # fade out if screen not off
-        galactic.set_brightness(galactic.get_brightness() - 0.01)
 
-        if galactic.get_brightness() > 0.0:
-            effect.draw()
+def get_text_from_web():
+    global connected_to_wifi
+    if not connected_to_wifi:
+        connect_to_wifi()
+    print("Getting text from web.")
+    blink(orange_)
+    connection_url = "{}/?pword={}".format(URL, password)
+    response = urequests.get(connection_url)
+    full_response = response.json()
+    my_message = full_response['text']
+    print("Got text - {}".format(my_message))
+    blink(white_)
+    return my_message
+
+
+# function for drawing outlined text
+def outline_text(text, x, y, properties):
+    message_colour = properties["message_colour"]
+    outline_colour = properties["outline_colour"]
+    graphics.set_pen(graphics.create_pen(int(outline_colour[0]), int(outline_colour[1]), int(outline_colour[2])))
+    graphics.text(text, x - 1, y - 1, -1, 1)
+    graphics.text(text, x, y - 1, -1, 1)
+    graphics.text(text, x + 1, y - 1, -1, 1)
+    graphics.text(text, x - 1, y, -1, 1)
+    graphics.text(text, x + 1, y, -1, 1)
+    graphics.text(text, x - 1, y + 1, -1, 1)
+    graphics.text(text, x, y + 1, -1, 1)
+    graphics.text(text, x + 1, y + 1, -1, 1)
+
+    graphics.set_pen(graphics.create_pen(int(message_colour[0]), int(message_colour[1]), int(message_colour[2])))
+    graphics.text(text, x, y, -1, 1)
+
+
+# constants for controlling scrolling text
+def _defaults():
+    default = {
+        "padding": 5,
+        "message_colour": (255, 255, 255),
+        "outline_colour": (0, 0, 0),
+        "background_colour": (0, 0, 0),
+        "hold_time": 2.0,
+        "step_time": 0.075
+    }
+    return default
+
+
+def display_text(initial_text="", initial_brightness=0.5, setup_values=_defaults()):
+    last_time = time.ticks_ms()
+    last_request = int(time.time())
+    message_text = initial_text
+    shift = 0
+    state = STATE_PRE_SCROLL
+
+    gu.set_brightness(initial_brightness)
+
+    # set the font
+    graphics.set_font("bitmap8")
+
+    while True:
+        time_ms = time.ticks_ms()
+
+        loop_time = int(time.time())
+        time_gap = loop_time - last_request
+
+        if time_gap > 30:
+            print("Re-get text from web")
+            message_text = get_text_from_web()
+            print(message_text)
+            last_request = int(time.time())
+
+        # calculate the message width so scrolling can happen
+        msg_width = graphics.measure_text(message_text, 1)
+
+        if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_UP):
+            gu.adjust_brightness(+0.01)
+
+        if gu.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_DOWN):
+            gu.adjust_brightness(-0.01)
+
+        if state == STATE_PRE_SCROLL and time_ms - last_time > setup_values["hold_time"] * 1000:
+            if msg_width + setup_values["padding"] * 2 >= width:
+                state = STATE_SCROLLING
+            last_time = time_ms
+
+        if state == STATE_SCROLLING and time_ms - last_time > setup_values["step_time"] * 1000:
+            shift += 1
+            if shift >= (msg_width + _defaults()["padding"] * 2) - width - 1:
+                state = STATE_POST_SCROLL
+            last_time = time_ms
+
+        if state == STATE_POST_SCROLL and time_ms - last_time > _defaults()["hold_time"] * 1000:
+            state = STATE_PRE_SCROLL
+            shift = 0
+            last_time = time_ms
+        background_colour = _defaults()["background_colour"]
+        graphics.set_pen(
+            graphics.create_pen(int(background_colour[0]), int(background_colour[1]), int(background_colour[2])))
+        graphics.clear()
+
+        outline_text(message_text, x=_defaults()["padding"] - shift, y=2, properties=_defaults())
 
         # update the display
-        galactic.update(graphics)
-    else:
-        effect.draw()
+        gu.update(graphics)
 
-        # update the display
-        galactic.update(graphics)
+        # pause for a moment (important or the USB serial device will fail)
+        time.sleep(0.001)
 
-        # brightness up/down
-        if galactic.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_UP):
-            brightness += 0.01
-        if galactic.is_pressed(GalacticUnicorn.SWITCH_BRIGHTNESS_DOWN):
-            brightness -= 0.01
-        brightness = max(min(brightness, 1.0), 0.0)
 
-        galactic.set_brightness(brightness)
+display_text(initial_text=get_text_from_web())
 
-    # pause for a moment (important or the USB serial device will fail
-    time.sleep(0.001)
