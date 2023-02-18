@@ -4,7 +4,7 @@ import network
 import urequests
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
-from secrets import WIFI_SSID, WIFI_PASSWORD, URL
+from secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
 
 connected_to_wifi = False
 
@@ -95,7 +95,8 @@ def get_text_from_web():
         connect_to_wifi()
     print("Getting text from web.")
     blink(orange_)
-    response = urequests.get(URL)
+    connection_url = "{}/?pword={}".format(URL, password)
+    response = urequests.get(connection_url)
     full_response = response.json()
     my_message = full_response['text']
     print("Got text - {}".format(my_message))
@@ -197,3 +198,4 @@ def display_text(initial_text="", initial_brightness=0.5, setup_values=_defaults
 
 
 display_text(initial_text=get_text_from_web())
+
