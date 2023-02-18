@@ -4,6 +4,9 @@ import network
 import urequests
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
+from secrets import WIFI_SSID, WIFI_PASSWORD, URL
+
+connected_to_wifi = False
 
 # create graphics surface for drawing
 graphics = PicoGraphics(DISPLAY)
@@ -74,23 +77,25 @@ def blink(clr):
 
 
 def connect_to_wifi():
+    global connected_to_wifi
     print("Connecting to Wifi")
     blink(red_)
-    from secrets import WIFI_SSID, WIFI_PASSWORD
     print("wifi available")
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    connected_to_wifi = True
     print("Connected to wifi")
     blink(green_)
 
 
 def get_text_from_web():
-    connect_to_wifi()
+    global connected_to_wifi
+    if not connected_to_wifi:
+        connect_to_wifi()
     print("Getting text from web.")
     blink(orange_)
-    url = "https://helloworld-k4lulsqqwa-ew.a.run.app"
-    response = urequests.get(url)
+    response = urequests.get(URL)
     full_response = response.json()
     my_message = full_response['text']
     print("Got text - {}".format(my_message))
