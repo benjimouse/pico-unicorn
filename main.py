@@ -115,9 +115,11 @@ def get_text_from_web():
     print("Getting text from web...")
     blink(ORANGE)
 
-    try:
-        headers = {"Authorization": BEARER_TOKEN}
+    headers = {
+        "Authorization": "Bearer "+BEARER_TOKEN
+    }
 
+    try:
         response = urequests.get(URL, headers=headers)
         full_response = response.json()
 
@@ -132,6 +134,7 @@ def get_text_from_web():
     except Exception as e:
         print(f"Exception during web request: {e}")
         show_error("Failed to fetch text")
+
 
 def outline_text(text, x, y, properties):
     message_colour = properties["message_colour"]
