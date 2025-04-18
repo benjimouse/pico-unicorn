@@ -1,9 +1,10 @@
 import json
 import network
 import urequests
-from time import ticks_ms, ticks_diff, time, sleep
+
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
+from time import ticks_ms, ticks_diff, time, sleep
 from local_secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
 
 # --- Setup display ---
