@@ -1,36 +1,58 @@
 #!/bin/bash
-# This script deploys the project to a Raspberry Pi Pico W using mpremote.
-# It checks for the Pico W connection, uploads the necessary files, and resets the device.
-# Ensure the script is run from the project root directory
-# and that mpremote is installed and available in the PATH.
+# ===================================================
+# 🚀 Deploy Script for Raspberry Pi Pico W
+# ---------------------------------------------------
+# This script checks:
+# - mpremote installed
+# - main.py exists
+# Then:
+# - Connects to the Pico W
+# - Uploads main.py and local_secrets.py
+# - Resets the board
+# 
 # Usage: ./deploy.sh
-# You will need to chmod +x deploy.sh to make it executable.
+# (Remember to chmod +x deploy.sh)
+# ===================================================
 
-# Check if mpremote is installed
+# --- Colour codes ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Colour
+
+# --- Check for mpremote ---
 if ! command -v mpremote &> /dev/null; then
-    echo "mpremote could not be found. Please install it first."
+    echo -e "${RED}❌ mpremote could not be found. Please install it first.${NC}"
     exit 1
 fi
-# Check if the script is run from the project root directory
+
+# --- Check running from project root ---
 if [ ! -f "main.py" ]; then
-    echo "This script must be run from the project root directory."
+    echo -e "${RED}❌ This script must be run from the project root directory.${NC}"
     exit 1
 fi
 
 PORT="auto"
 
-echo "Checking Pico-W connection..."
+echo -e "${YELLOW}🔍 Checking Pico-W connection...${NC}"
 
 if mpremote connect $PORT exec "print('Connected')" >/dev/null 2>&1; then
-    echo "Connected. Uploading files..."
+    echo -e "${GREEN}✅ Pico-W connected.${NC}"
+    echo ""
 
+    echo -e "${BLUE}📤 Uploading files...${NC}"
     mpremote connect $PORT fs cp main.py :main.py
     mpremote connect $PORT fs cp local_secrets.py :local_secrets.py
+    echo -e "${GREEN}✅ Files uploaded.${NC}"
+    echo ""
 
+    echo -e "${BLUE}🔄 Rebooting device...${NC}"
     mpremote connect $PORT reset
+    echo ""
 
-    echo "Deploy complete! 🎉"
+    echo -e "${GREEN}🎉 Deploy complete! Your Unicorn is ready to fly! 🦄${NC}"
 else
-    echo "❌ Pico-W not found. Make sure it is connected."
+    echo -e "${RED}❌ Pico-W not found. Please check your USB connection and try again.${NC}"
     exit 1
 fi
