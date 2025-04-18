@@ -133,16 +133,10 @@ def get_text_from_web():
 
 def outline_text(text, x, y, properties):
     message_colour = properties["message_colour"]
-    outline_colour = properties["outline_colour"]
-
-    graphics.set_pen(graphics.create_pen(*outline_colour))
-    for dx in (-1, 0, 1):
-        for dy in (-1, 0, 1):
-            if dx != 0 or dy != 0:
-                graphics.text(text, x + dx, y + dy, -1, 1)
 
     graphics.set_pen(graphics.create_pen(*message_colour))
     graphics.text(text, x, y, -1, 1)
+
 
 def default_setup():
     return {
