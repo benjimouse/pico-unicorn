@@ -5,7 +5,7 @@ import urequests
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
 from time import ticks_ms, ticks_diff, time, sleep
-from local_secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
+from local_secrets import WIFI_SSID, WIFI_PASSWORD, URL, BEARER_TOKEN
 
 # --- Setup display ---
 graphics = PicoGraphics(DISPLAY)
@@ -116,8 +116,9 @@ def get_text_from_web():
     blink(ORANGE)
 
     try:
-        url = f"{URL}/?pword={password}"
-        response = urequests.get(url)
+        headers = {"Authorization": BEARER_TOKEN}
+
+        response = urequests.get(URL, headers=headers)
         full_response = response.json()
 
         if 'text' not in full_response:
