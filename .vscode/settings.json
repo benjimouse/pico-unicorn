@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./typings"
+    ],
+    "python.linting.enabled": true,
+    "python.analysis.useLibraryCodeForTypes": true
+}
