@@ -131,3 +131,6 @@ secrets.py
 clock_mod_secrets.py
 config.py
 .idea/
+
+# Project specific
+local_secrets.py

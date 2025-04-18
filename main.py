@@ -4,7 +4,7 @@ import network
 import urequests
 from galactic import GalacticUnicorn
 from picographics import PicoGraphics, DISPLAY_GALACTIC_UNICORN as DISPLAY
-from secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
+from local_secrets import WIFI_SSID, WIFI_PASSWORD, URL, password
 
 connected_to_wifi = False
 
